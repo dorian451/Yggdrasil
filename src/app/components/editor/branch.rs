@@ -104,9 +104,6 @@ impl BranchState {
                             let three = expr_maybe_list_starts_with(sub2_iter.clone(), correct1);
                             let four = expr_maybe_list_starts_with(sub2_iter, correct2);
 
-                            info!("{:#?},\n----\n{:#?}", correct1, correct2);
-                            info!("{:?}", (one, two, three, four));
-
                             match (one, two, three, four) {
                                 (true, _, _, true) | (_, true, true, _) => None,
                                 (true, _, _, _) | (_, true, _, _) => {
