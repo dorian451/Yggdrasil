@@ -68,6 +68,15 @@ impl BranchState {
         let sub: RwSignal<Option<(RwSignal<BranchState>, RwSignal<BranchState>)>> =
             Default::default();
 
+        let decomposed_rule = Memo::new(move |_| {
+            let rule = branch_rule.read();
+            let root_statement = statements.read().last().map(|(_, v)| v.expr().read());
+            Some(
+                rule.as_ref()?
+                    .decompose(root_statement?.as_ref()?.simplify()),
+            )
+        });
+
         let current_error = Memo::new(move |_| {
             let sub = sub.read().map(|(one, two)| (*one.read(), *two.read()));
             let root_statement = statements.read().last().map(|(_, v)| v.expr().read());
@@ -78,10 +87,10 @@ impl BranchState {
                 }
                 (None, Some(_), _) => Some(BranchError::NoRuleSelected),
                 (Some(_), None, _) => Some(BranchError::NoStatements),
-                (Some(rule), Some((sub1, sub2)), Some(root_statement))
-                    if root_statement.is_some() =>
+                (Some(_), Some((sub1, sub2)), Some(_))
+                    if let Some(decomposed_rule) = decomposed_rule.read().deref() =>
                 {
-                    match rule.decompose(root_statement.as_ref().unwrap()) {
+                    match decomposed_rule {
                         Ok((correct1, correct2)) => {
                             let sub1_statements = sub1.statements.read();
                             let sub1_iter = sub1_statements.iter().map(|(_, v)| v.expr().read());
@@ -89,11 +98,11 @@ impl BranchState {
                             let sub2_statements = sub2.statements.read();
                             let sub2_iter = sub2_statements.iter().map(|(_, v)| v.expr().read());
 
-                            let one = expr_maybe_list_starts_with(sub1_iter.clone(), &correct1);
-                            let two = expr_maybe_list_starts_with(sub1_iter, &correct2);
+                            let one = expr_maybe_list_starts_with(sub1_iter.clone(), correct1);
+                            let two = expr_maybe_list_starts_with(sub1_iter, correct2);
 
-                            let three = expr_maybe_list_starts_with(sub2_iter.clone(), &correct1);
-                            let four = expr_maybe_list_starts_with(sub2_iter, &correct2);
+                            let three = expr_maybe_list_starts_with(sub2_iter.clone(), correct1);
+                            let four = expr_maybe_list_starts_with(sub2_iter, correct2);
 
                             info!("{:#?},\n----\n{:#?}", correct1, correct2);
                             info!("{:?}", (one, two, three, four));
@@ -109,7 +118,7 @@ impl BranchState {
                                 _ => Some(BranchError::SubBranches),
                             }
                         }
-                        Err(err) => Some(BranchError::Root(err)),
+                        Err(err) => Some(BranchError::Root(err.clone())),
                     }
                 }
                 _ => None,
