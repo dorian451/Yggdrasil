@@ -1,0 +1,9 @@
+[package]
+name = "yggdrasil-engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+yggdrasil-grammar = { path = "../grammar", features = ["discriminants"] }
+strum = { workspace = true, features = ["derive"] }
+thiserror.workspace = true
