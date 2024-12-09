@@ -18,7 +18,7 @@ use tracing_subscriber::{
     EnvFilter,
 };
 
-#[cfg(any(feature = "hydrate", feature = "csr"))]
+#[cfg(feature = "hydrate")]
 use tracing_subscriber_wasm::MakeConsoleWriter;
 
 #[cfg(feature = "hydrate")]
@@ -37,7 +37,7 @@ fn new_layer<S>() -> Layer<S> {
     Layer::new()
 }
 
-#[cfg(any(feature = "hydrate", feature = "csr"))]
+#[cfg(feature = "hydrate")]
 fn new_layer<S>() -> Layer<
     S,
     tracing_subscriber::fmt::format::DefaultFields,
@@ -64,7 +64,7 @@ pub fn init_tracing() -> Result<(), Box<dyn Error>> {
             },
         ));
 
-    #[cfg(any(feature = "hydrate", feature = "csr"))]
+    #[cfg(feature = "hydrate")]
     reg.with(new_layer().with_writer(MakeConsoleWriter::default()))
         .try_init()?;
 

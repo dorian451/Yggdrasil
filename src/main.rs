@@ -7,8 +7,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use tracing::info;
-    use yggdrasil_lib::fileserv::file_and_error_handler;
-    use yggdrasil_lib::{app::*, init_tracing};
+    use yggdrasil::fileserv::file_and_error_handler;
+    use yggdrasil::{app::*, init_tracing};
 
     init_tracing()?;
 
@@ -42,16 +42,4 @@ pub fn main() {
     // no client-side main function
     // unless we want this to work with e.g., Trunk for a purely client-side app
     // see lib.rs for hydration function instead
-
-    
-    #[cfg(feature = "csr")]
-    {
-        use yggdrasil_lib::init_tracing;
-        use yggdrasil_lib::app::*;
-
-        console_error_panic_hook::set_once();
-        init_tracing().unwrap();
-
-        leptos::mount::mount_to_body(App);
-    }
 }

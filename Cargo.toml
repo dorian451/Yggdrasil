@@ -14,7 +14,6 @@ thiserror = "2.0"
 strum = "0.26"
 
 [lib]
-name = "yggdrasil_lib"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
@@ -54,8 +53,6 @@ resvg = "0.44"
 ico = "0.3"
 
 [features]
-csr = ["leptos/csr", "tracing", "getrandom/js", "dep:tracing-subscriber-wasm"]
-
 hydrate = [
     "leptos/hydrate",
     "tracing",
