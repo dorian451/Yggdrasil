@@ -79,18 +79,15 @@ impl BranchRule {
             Self::Biconditional => {
                 if let Expr::Biconditional { left, right, .. } = expr {
                     Ok((
+                        HashSet::from([left.simplify().clone(), right.simplify().clone()]),
                         HashSet::from([
-                            left.simplify().clone(),
-                            Expr::Not {
-                                _token: (),
-                                expr: Box::new(right.simplify().clone()),
-                            },
-                        ]),
-                        HashSet::from([
-                            right.simplify().clone(),
                             Expr::Not {
                                 _token: (),
                                 expr: Box::new(left.simplify().clone()),
+                            },
+                            Expr::Not {
+                                _token: (),
+                                expr: Box::new(right.simplify().clone()),
                             },
                         ]),
                     ))
@@ -103,9 +100,23 @@ impl BranchRule {
             }
             Self::NotBiconditional => {
                 if let Expr::Not { expr, .. } = expr {
-                    if let Expr::Biconditional { .. } = expr.simplify() {
-                        let (right, left) = Self::decompose(&Self::Biconditional, expr)?;
-                        Ok((left, right))
+                    if let Expr::Biconditional { left, right, .. } = expr.simplify() {
+                        Ok((
+                            HashSet::from([
+                                left.simplify().clone(),
+                                Expr::Not {
+                                    _token: (),
+                                    expr: Box::new(right.simplify().clone()),
+                                },
+                            ]),
+                            HashSet::from([
+                                Expr::Not {
+                                    _token: (),
+                                    expr: Box::new(left.simplify().clone()),
+                                },
+                                right.simplify().clone(),
+                            ]),
+                        ))
                     } else {
                         Err(ValidationError::InvalidStatementType(
                             ExprDiscriminants::Biconditional,
