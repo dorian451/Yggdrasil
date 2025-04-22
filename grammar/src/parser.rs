@@ -1,4 +1,12 @@
-use crate::expr::{constantexpr::{Constant, ConstantExpr}, Expr, literal::Literal, variable::Variable};
+use crate::{
+    error::YggError,
+    expr::{
+        constantexpr::{Constant, ConstantExpr},
+        literal::Literal,
+        variable::Variable,
+        Expr,
+    },
+};
 use chumsky::{
     extra::Full,
     prelude::{choice, just, map_ctx, recursive, regex, Rich},
@@ -9,7 +17,7 @@ use std::{collections::HashMap, fmt::Debug};
 
 pub(crate) type Input<'a> = &'a str;
 pub(crate) type ContextType = HashMap<String, Variable>;
-pub(crate) type Extras<'a> = Full<Rich<'a, char>, (), ContextType>;
+pub(crate) type Extras<'a> = Full<YggError<'a, char>, (), ContextType>;
 
 fn grouping<'a, E, A: Parser<'a, Input<'a>, E, Extras<'a>> + Clone>(
     atom: A,
@@ -42,7 +50,10 @@ fn variable<'a>(new: bool) -> impl Parser<'a, Input<'a>, Variable, Extras<'a>> +
             match found_var {
                 Some(v) => v,
                 None => {
-                    emitter.emit(Rich::custom(e.span(), "This variable does not exist"));
+                    emitter.emit(YggError::custom(
+                        vec![e.span()],
+                        "This variable does not exist",
+                    ));
                     Variable {
                         name: v.to_string(),
                         id: "**invalid**".to_string(),
@@ -124,12 +135,12 @@ fn infix_op_set<
             .map({
                 |(op, into)| {
                     atom.clone()
-                        .then((op.clone().to_span().rewind().then_ignore(op)).padded())
+                        .then((op.clone().to_span()).padded())
                         .then(atom.clone())
                         // attempt to capture extra usages of the operator and report them
                         // the operators this function was called with are not associative
                         .then(
-                            (any_op.clone().to_span().then_ignore(atom.clone().or_not()))
+                            (any_op.clone().to_span().then_ignore(atom.clone()))
                                 .padded()
                                 .repeated()
                                 .collect::<Vec<_>>(),
@@ -141,9 +152,9 @@ fn infix_op_set<
                                     into(Box::new(a.clone()), Box::new(b))
                                 } else {
                                     emitter.emit(
-                                        Rich::custom(
-                                            op_span.union(*invalid_input.last().unwrap()), 
-                                            "The operators in this expression are not associative; use parentheses to indicate order of operation"
+                                        YggError::custom(
+                                            invalid_input.into_iter().chain([op_span].into_iter()).collect(),
+                                            "These operators are not associative; use parentheses to indicate order of operation"
                                         )
                                     );
 
@@ -192,7 +203,7 @@ fn constant_expr_atom<'a, T: Parser<'a, Input<'a>, ConstantExpr, Extras<'a>> + C
         variable(false).map(ConstantExpr::Variable),
         regex(r"[0-9]+").try_map(|digits: &str, span| {
             Ok(ConstantExpr::Number(digits.parse().map_err(|e| {
-                Rich::custom(span, format!("Could not parse number: {}", e))
+                YggError::custom(vec![span], format!("Could not parse number: {}", e))
             })?))
         }),
     ))
