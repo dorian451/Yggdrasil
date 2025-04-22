@@ -4,7 +4,7 @@ use std::{
     ops::Deref,
 };
 
-use yggdrasil_grammar::Expr;
+use yggdrasil_grammar::expr::Expr;
 
 pub fn expr_list_starts_with<'a, L: Iterator<Item = &'a Expr>>(
     mut list: L,
@@ -23,7 +23,7 @@ pub fn expr_list_starts_with<'a, L: Iterator<Item = &'a Expr>>(
 
 pub fn expr_maybe_list_starts_with(
     mut list: impl Iterator<Item = impl Deref<Target = Option<Expr>>>,
-    set: &HashSet<Expr>,
+    set: &HashSet<Box<Expr>>,
 ) -> bool {
     let mut found = 0;
     let mut matched = HashSet::new();

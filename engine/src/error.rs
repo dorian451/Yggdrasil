@@ -1,5 +1,5 @@
 use thiserror::Error;
-use yggdrasil_grammar::{Expr, ExprDiscriminants};
+use yggdrasil_grammar::expr::ExprDiscriminants;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum EngineError {

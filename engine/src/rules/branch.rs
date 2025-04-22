@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use crate::{error::ValidationError, EngineResult};
-use strum::{Display, EnumIter, EnumMessage, EnumString, IntoEnumIterator};
-use yggdrasil_grammar::{Expr, ExprDiscriminants};
+use strum::{Display, EnumIter, EnumMessage, EnumString};
+use yggdrasil_grammar::expr::{Expr, ExprDiscriminants};
 
 #[derive(Debug, Clone, Copy, EnumIter, EnumMessage, Display, EnumString)]
 pub enum BranchRule {
@@ -22,16 +22,17 @@ pub enum BranchRule {
     NotBiconditional,
 }
 
+type ExprSet = HashSet<Box<Expr>>;
+
 impl BranchRule {
     /// Decomposes an [Expr] into two branches
-    pub fn decompose(&self, expr: &Expr) -> EngineResult<(HashSet<Expr>, HashSet<Expr>)> {
-        let expr = expr.simplify();
+    pub fn decompose(&self, expr: &Expr) -> EngineResult<(ExprSet, ExprSet)> {
         match self {
             Self::Or => {
-                if let Expr::Or { left, right, .. } = expr {
+                if let Expr::Or(left, right) = expr {
                     Ok((
-                        HashSet::from([left.simplify().clone()]),
-                        HashSet::from([right.simplify().clone()]),
+                        HashSet::from([left.clone()]),
+                        HashSet::from([right.clone()]),
                     ))
                 } else {
                     Err(ValidationError::InvalidStatementType(
@@ -41,16 +42,16 @@ impl BranchRule {
                 }
             }
             Self::Nand => {
-                if let Expr::Not { expr, .. } = expr {
-                    if let Expr::And { left, right, .. } = expr.simplify() {
+                if let Expr::Not(expr) = expr {
+                    if let Expr::And(left, right) = expr.as_ref() {
                         Ok((
-                            HashSet::from([left.simplify().clone()]),
-                            HashSet::from([right.simplify().clone()]),
+                            HashSet::from([left.clone()]),
+                            HashSet::from([right.clone()]),
                         ))
                     } else {
                         Err(ValidationError::InvalidStatementType(
                             ExprDiscriminants::And,
-                            ExprDiscriminants::from(expr.simplify()),
+                            ExprDiscriminants::from(expr.as_ref()),
                         ))?
                     }
                 } else {
@@ -61,13 +62,10 @@ impl BranchRule {
                 }
             }
             Self::Conditional => {
-                if let Expr::Conditional { left, right, .. } = expr {
+                if let Expr::Conditional(left, right) = expr {
                     Ok((
-                        HashSet::from([Expr::Not {
-                            _token: (),
-                            expr: Box::new(left.simplify().clone()),
-                        }]),
-                        HashSet::from([right.simplify().clone()]),
+                        HashSet::from([Box::new(Expr::Not(left.clone()))]),
+                        HashSet::from([right.clone()]),
                     ))
                 } else {
                     Err(ValidationError::InvalidStatementType(
@@ -77,18 +75,12 @@ impl BranchRule {
                 }
             }
             Self::Biconditional => {
-                if let Expr::Biconditional { left, right, .. } = expr {
+                if let Expr::Biconditional(left, right) = expr {
                     Ok((
-                        HashSet::from([left.simplify().clone(), right.simplify().clone()]),
+                        HashSet::from([left.clone(), right.clone()]),
                         HashSet::from([
-                            Expr::Not {
-                                _token: (),
-                                expr: Box::new(left.simplify().clone()),
-                            },
-                            Expr::Not {
-                                _token: (),
-                                expr: Box::new(right.simplify().clone()),
-                            },
+                            Box::new(Expr::Not(left.clone())),
+                            Box::new(Expr::Not(right.clone())),
                         ]),
                     ))
                 } else {
@@ -99,28 +91,16 @@ impl BranchRule {
                 }
             }
             Self::NotBiconditional => {
-                if let Expr::Not { expr, .. } = expr {
-                    if let Expr::Biconditional { left, right, .. } = expr.simplify() {
+                if let Expr::Not(expr) = expr {
+                    if let Expr::Biconditional(left, right) = expr.as_ref() {
                         Ok((
-                            HashSet::from([
-                                left.simplify().clone(),
-                                Expr::Not {
-                                    _token: (),
-                                    expr: Box::new(right.simplify().clone()),
-                                },
-                            ]),
-                            HashSet::from([
-                                Expr::Not {
-                                    _token: (),
-                                    expr: Box::new(left.simplify().clone()),
-                                },
-                                right.simplify().clone(),
-                            ]),
+                            HashSet::from([left.clone(), Box::new(Expr::Not(right.clone()))]),
+                            HashSet::from([Box::new(Expr::Not(left.clone())), right.clone()]),
                         ))
                     } else {
                         Err(ValidationError::InvalidStatementType(
                             ExprDiscriminants::Biconditional,
-                            ExprDiscriminants::from(expr.simplify()),
+                            ExprDiscriminants::from(expr.as_ref()),
                         ))?
                     }
                 } else {
