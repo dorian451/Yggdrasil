@@ -116,15 +116,12 @@ pub fn Editor() -> impl IntoView {
                 if let Some(statement_problem) = s.as_ref()
                     && !matches!(branch_problem, BranchError::DependentStatementError) =>
             {
-                Some(format!(
-                    "branch error: {} \n statement error: {}",
-                    branch_problem, statement_problem
-                ))
+                Some(format!("{}\n{}", branch_problem, statement_problem))
             }
             (_, Some(ref s)) if let Some(statement_problem) = s.as_ref() => {
-                Some(format!("statement error: {}", statement_problem))
+                Some(format!("{}", statement_problem))
             }
-            (Some(branch_problem), _) => Some(format!("branch error: {}", branch_problem)),
+            (Some(branch_problem), _) => Some(format!("{}", branch_problem)),
             _ => None,
         }
     });
@@ -216,7 +213,7 @@ pub fn Editor() -> impl IntoView {
                         .map(|v| {
                             v.lines()
                                 .map(|l| {
-                                    view! { <p>{l.to_owned()}</p> }
+                                    view! { <p inner_html=l.to_owned() /> }
                                 })
                                 .collect_view()
                         })

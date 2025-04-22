@@ -2,13 +2,19 @@ use crate::app::{
     components::editor::status::{StatusIndicator, StatusLevel},
     util::hotkeys::use_hotkey,
 };
+use ariadne::{
+    Cache, Color, Config, FileCache, FnCache, IndexType, Label, Report, ReportBuilder, ReportKind,
+    Source,
+};
 use leptos::html::{HtmlElement, Input};
 use leptos::prelude::*;
 use leptos::{either::EitherOf3, ev::InputEvent};
 use leptos_use::{core::IntoElementMaybeSignal, signal_debounced};
-use std::{cell::LazyCell, collections::HashMap, fmt::Display, sync::LazyLock};
+use std::{
+    cell::LazyCell, collections::HashMap, fmt::Display, io::BufWriter, ops::Range, sync::LazyLock,
+};
 use strum::IntoEnumIterator;
-use tracing::info;
+use tracing::{debug, info};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 use yggdrasil_engine::{error::EngineError, rules::branch::BranchRule};
@@ -27,7 +33,7 @@ pub enum StatementError {
 impl Display for StatementError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Parsing(err) => write!(f, "Parsing error: {}", err),
+            Self::Parsing(err) => write!(f, "{}", err),
             Self::Logic(engine_error) => {
                 write!(f, "Evaluation error: {}", engine_error)
             }
@@ -60,18 +66,34 @@ impl StatementState {
                 let raw = raw.clone();
                 PARSER.with(move |parser| {
                     let parser = parser.get();
-                    let res = parser.parse(&raw).into_result().map_err(|err| {
-                        err.first()
-                            .map(|v| {
-                                format!(
-                                    "chars: {}-{}: {:?}",
-                                    v.span().start,
-                                    v.span().end,
-                                    v.reason()
+                    let res = parser.parse(&raw).into_result().map_err(|errs| {
+                        errs.into_iter()
+                            .map(|err| {
+                                let mut buf = BufWriter::new(Vec::new());
+
+                                let report = Report::build(ReportKind::Error, ("", (&err).into()))
+                                    .with_config(Config::default().with_index_type(IndexType::Byte))
+                                    .with_message(err.reason().to_string())
+                                    .with_labels(err.spans().map(|s| {
+                                        Label::new(("", s.into_range())).with_color(Color::Red)
+                                    }))
+                                    .finish();
+
+                                report
+                                    .write_for_stdout(("", Source::from(raw.clone())), &mut buf)
+                                    .unwrap();
+
+                                ansi_to_html::convert(
+                                    String::from_utf8_lossy(buf.buffer()).as_ref(),
                                 )
+                                .unwrap_or("error".to_string())
                             })
-                            .unwrap_or("Parse error".to_string())
+                            .fold(String::new(), |a, v| a + &v)
                     });
+
+                    let _ = res
+                        .as_ref()
+                        .inspect(|res| info!("parsed expression: {:#?}", res));
 
                     res
                 })
@@ -82,7 +104,7 @@ impl StatementState {
             let expr = expr.read();
             match expr.as_ref() {
                 Ok(_) => None,
-                Err(_) => Some(StatementError::Parsing("Invalid syntax".to_string())),
+                Err(err) => Some(StatementError::Parsing(err.clone())),
             }
         });
 
