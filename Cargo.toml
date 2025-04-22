@@ -8,10 +8,14 @@ edition = "2021"
 
 
 [workspace.dependencies]
-rust-sitter = "0.4"
+ariadne = "0.5"
+chumsky = "0.10"
+
+nanoid = "0.4.0"
+rust-sitter = { version = "0.4" }
 rust-sitter-tool = "0.4"
-thiserror = "2.0"
 strum = "0.26"
+thiserror = "2.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -23,30 +27,30 @@ yggdrasil-engine = { path = "./engine" }
 axum = { version = "0.7", optional = true }
 console_error_panic_hook = "0.1"
 getrandom = { version = "0.2", optional = true }
+http = "1.1"
+indexmap = "2.6"
 leptos = { version = "0.7", features = ["nightly"] }
 leptos_axum = { version = "0.7", optional = true }
 leptos_meta = { version = "0.7" }
 leptos_router = { version = "0.7", features = ["nightly"] }
+leptos-use = "0.14"
+nanoid.workspace = true
 reactive_stores = { version = "0.1" }
 reactive_stores_macro = { version = "0.1" }
+strum = { workspace = true }
+thiserror.workspace = true
 tokio = { version = "1.40", features = ["rt-multi-thread"], optional = true }
 tower = { version = "0.5", features = ["util"], optional = true }
 tower-http = { version = "0.6", features = ["fs"], optional = true }
-wasm-bindgen = "=0.2.97"
-thiserror.workspace = true
-http = "1.1"
 tracing = { version = "0.1", optional = true }
+tracing-error = { version = "0.2", optional = true }
+tracing-panic = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = [
     "env-filter",
 ], optional = true }
-tracing-error = { version = "0.2", optional = true }
 tracing-subscriber-wasm = { version = "0.1", optional = true }
-tracing-panic = { version = "0.1", optional = true }
-leptos-use = "0.14"
-web-sys = { version = "0.3.70" }
-indexmap = "2.6"
-nanoid = "0.4.0"
-strum = { workspace = true }
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3" }
 
 [build-dependencies]
 resvg = "0.44"
