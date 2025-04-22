@@ -37,7 +37,7 @@ fn new_layer<S>() -> Layer<S> {
     Layer::new()
 }
 
-#[cfg(feature = "hydrate")]
+#[cfg(all(feature = "hydrate", not(feature = "ssr")))]
 fn new_layer<S>() -> Layer<
     S,
     tracing_subscriber::fmt::format::DefaultFields,
@@ -64,7 +64,7 @@ pub fn init_tracing() -> Result<(), Box<dyn Error>> {
             },
         ));
 
-    #[cfg(feature = "hydrate")]
+    #[cfg(all(feature = "hydrate", not(feature = "ssr")))]
     reg.with(new_layer().with_writer(MakeConsoleWriter::default()))
         .try_init()?;
 

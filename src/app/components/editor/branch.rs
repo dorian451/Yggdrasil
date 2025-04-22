@@ -71,10 +71,7 @@ impl BranchState {
         let decomposed_rule = Memo::new(move |_| {
             let rule = branch_rule.read();
             let root_statement = statements.read().last().map(|(_, v)| v.expr().read());
-            Some(
-                rule.as_ref()?
-                    .decompose(root_statement?.as_ref()?.simplify()),
-            )
+            Some(rule.as_ref()?.decompose(root_statement?.as_ref()?))
         });
 
         let current_error = Memo::new(move |_| {

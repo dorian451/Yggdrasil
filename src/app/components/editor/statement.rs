@@ -6,15 +6,13 @@ use leptos::html::{HtmlElement, Input};
 use leptos::prelude::*;
 use leptos::{either::EitherOf3, ev::InputEvent};
 use leptos_use::{core::IntoElementMaybeSignal, signal_debounced};
-use std::{collections::HashMap, fmt::Display, sync::LazyLock};
+use std::{cell::LazyCell, collections::HashMap, fmt::Display, sync::LazyLock};
 use strum::IntoEnumIterator;
 use tracing::info;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
-use yggdrasil_engine::{
-    error::EngineError, rules::branch::BranchRule, syntax::validate::validate_syntax,
-};
-use yggdrasil_grammar::Expr;
+use yggdrasil_engine::{error::EngineError, rules::branch::BranchRule};
+use yggdrasil_grammar::{expr::Expr, Parser, PARSER};
 
 /// An error a statement can have
 #[derive(Clone, Debug, PartialEq)]
@@ -59,10 +57,23 @@ impl StatementState {
         let raw_debounced: Signal<String> = signal_debounced(raw, 100.0);
         let expr = Memo::new(move |_| {
             raw_debounced.with(|raw| {
-                yggdrasil_grammar::parse(raw).map_err(|err| {
-                    err.first()
-                        .map(|v| format!("chars: {}-{}: {:?}", v.start, v.end, v.reason))
-                        .unwrap_or("Parse error".to_string())
+                let raw = raw.clone();
+                PARSER.with(move |parser| {
+                    let parser = parser.get();
+                    let res = parser.parse(&raw).into_result().map_err(|err| {
+                        err.first()
+                            .map(|v| {
+                                format!(
+                                    "chars: {}-{}: {:?}",
+                                    v.span().start,
+                                    v.span().end,
+                                    v.reason()
+                                )
+                            })
+                            .unwrap_or("Parse error".to_string())
+                    });
+
+                    res
                 })
             })
         });
@@ -70,10 +81,7 @@ impl StatementState {
         let error = Memo::new(move |_| {
             let expr = expr.read();
             match expr.as_ref() {
-                Ok(expr) => match validate_syntax(expr) {
-                    Ok(_) => None,
-                    Err(err) => Some(StatementError::Logic(err)),
-                },
+                Ok(_) => None,
                 Err(_) => Some(StatementError::Parsing("Invalid syntax".to_string())),
             }
         });
